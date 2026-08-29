@@ -1,0 +1,41 @@
+name: Materialize hero image
+
+on:
+  push:
+    branches:
+      - hero-real-file-fix
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hero-real-file-fix
+      - name: Decode sharp hero to real WebP and update homepage
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode assets/hero-sharp.b64 > assets/hero-megan-sharp.webp
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          old = '<img data-b64-parts="assets/hero-sharp.b64" data-mime="image/webp" alt="Megan Harden">'
+          new = '<img src="assets/hero-megan-sharp.webp?v=20260828-2305" alt="Megan Harden" width="1407" height="1800">'
+          if old not in s:
+              raise SystemExit('Expected hero tag not found; refusing to make an uncontrolled edit.')
+          p.write_text(s.replace(old, new))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/hero-megan-sharp.webp index.html
+          if git diff --cached --quiet; then
+            echo "No changes needed."
+            exit 0
+          fi
+          git commit -m "Use real sharp Megan hero image file"
+          git push origin HEAD:hero-real-file-fix
