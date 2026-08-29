@@ -1,0 +1,1 @@
+Build the verified Megan hero image as a normal WebP asset.
