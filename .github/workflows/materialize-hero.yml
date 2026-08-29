@@ -1,0 +1,54 @@
+name: Materialize verified hero image
+
+on:
+  push:
+    paths:
+      - 'hero-materialize-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild verified WebP asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            assets/hero-final-01.b64 \
+            assets/hero-final-02.b64 \
+            assets/hero-final-03.b64 \
+            assets/hero-final-04.b64 \
+            assets/hero-final-05.b64 \
+            assets/hero-final-06.b64 \
+            assets/hero-final-07.b64 \
+            assets/hero-final-08a1.b64 \
+            assets/hero-final-08a2.b64 \
+            assets/hero-final-08a3.b64 \
+            assets/hero-final-08a4.b64 \
+            assets/hero-final-08a5.b64 \
+            assets/hero-final-08b.b64 \
+            assets/hero-final-09.b64 \
+            assets/hero-final-10.b64 \
+            | base64 --decode > assets/hero-megan-final.webp
+          test "$(wc -c < assets/hero-megan-final.webp)" -eq 69168
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          start = '        <img data-b64-parts="'
+          target = next(line for line in s.splitlines() if line.startswith(start) and 'hero-final-01.b64' in line)
+          replacement = '        <img src="assets/hero-megan-final.webp?v=1" alt="Megan Harden" width="800" height="1000">'
+          p.write_text(s.replace(target, replacement))
+          PY
+      - name: Commit normal image asset
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/hero-megan-final.webp index.html
+          git commit -m "Use normal verified Megan hero image file"
+          git push
